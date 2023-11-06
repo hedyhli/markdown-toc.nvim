@@ -36,7 +36,7 @@ function M.formatters.gfm(existing_headings, heading)
   return heading_str
 end
 
-
+---Return a list of lines of TOC list given a list of heading trees
 ---@param headings table
 ---@return table lines
 function M.gen_toc_list(headings)
@@ -63,7 +63,6 @@ function M.gen_toc_list(headings)
 
     marker_index = (marker_index - 1) % #markers + 1
     local marker = markers[marker_index]
-
     local line = string.format("%s%s [%s](#%s)" , string.rep(' ', indent), marker, heading.name, heading.link)
     table.insert(lines, line)
 
@@ -84,34 +83,64 @@ function M.gen_toc_list(headings)
   return lines
 end
 
-function M.find_fences(fstart, fend)
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local is_inside_code_block = false
-  -- { start = line, end_ = line }
-  local found_info = {}
-
+---@see find_fences
+local function _find_fences(fstart, fend, lines)
+  local locations = {}
+  local in_code = false
   for i, line in ipairs(lines) do
-    if found_info.start and found_info.end_ then
+    if locations.start and locations.end_ then
       break
     end
 
     if string.find(line, '^```') then
-      is_inside_code_block = not is_inside_code_block
+      in_code = not in_code
     else
-
-      if not is_inside_code_block then
+      if not in_code then
         if string.find(line, fstart, 1, true) then
-          found_info.start = i
+          locations.start = i
         end
         if string.find(line, fend, 1, true) then
-          found_info.end_ = i
+          locations.end_ = i
         end
       end
-
     end
   end
+  return locations
+end
 
-  return found_info
+---@see find_fences
+local function _find_fences_same(fence, lines)
+  local in_code = false
+  local locations = {}
+  for i, line in ipairs(lines) do
+    if string.find(line, '^```') then
+      in_code = not in_code
+    else
+      if not in_code then
+        if string.find(line, fence, 1, true) then
+          if locations.start then
+            locations.end_ = i
+            break
+          else
+            locations.start = i
+          end
+        end
+      end
+    end
+  end
+  return locations
+end
+
+---Return a table containing line number of start and end fences
+---@param fstart string
+---@param fend string
+---@return table locations { start = line, end_ = line }
+function M.find_fences(fstart, fend)
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  if fstart ~= fend then
+    return _find_fences(fstart, fend, lines)
+  end
+  return _find_fences_same(fstart, lines)
 end
 
 return M
