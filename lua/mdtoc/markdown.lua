@@ -4,8 +4,9 @@ local config = require('mdtoc/config')
 local M = {}
 
 ---@return table
-function M.get_headings()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+function M.get_headings(start_from)
+  start_from = start_from or 0
+  local lines = vim.api.nvim_buf_get_lines(0, start_from, -1, false)
   local level_symbols = { { children = {} } }
   local max_level = 1
   local is_inside_code_block = false
@@ -22,13 +23,18 @@ function M.get_headings()
 
     local header, title = string.match(value, '^(#+)%s+(.*)$')
     if not header and next_value and not is_emtpy_line then
+      -- Setext headings
       if string.match(next_value, '^=+%s*$') then
         header = '#'
-        title = value:gsub("^%s+", ""):gsub("%s+$", "")
+        title = value
       elseif string.match(next_value, '^-+%s*$') then
         header = '##'
-        title = value:gsub("^%s+", ""):gsub("%s+$", "")
+        title = value
       end
+    end
+
+    if title then
+      title = title:gsub("^%s+", ""):gsub("%s+$", "")
     end
 
     if header and not is_inside_code_block then
@@ -62,7 +68,7 @@ function M.get_headings()
         max_level = depth
 
         local heading_link
-        heading_link = toc.formatters.gfm(all_heading_links, title)
+        heading_link = toc.link_formatters.gfm(all_heading_links, title)
 
         local entry = {
           -- kind = 13,

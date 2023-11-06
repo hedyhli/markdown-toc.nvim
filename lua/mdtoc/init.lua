@@ -3,44 +3,61 @@ local toc = require('mdtoc/toc')
 local config = require('mdtoc/config')
 local utils = require('mdtoc/utils')
 
+local empty_or_nil = utils.empty_or_nil
+local falsey = utils.falsey
+-- local truthy = utils.truthy
+
 local M = {}
 M.commands = {'insert', 'update', 'remove'}
 
-local function fmt_fence_start(fence)
-  return '<!-- '.. fence ..' -->'
-end
+local function fmt_fence_start(fence) return '<!-- '..fence..' -->' end
 
-local function fmt_fence_end(fence)
-  return '<!-- '.. fence ..' -->'
-end
+local function fmt_fence_end(fence) return '<!-- '..fence..' -->' end
 
 local function get_fences()
   local fences = config.opts.fences
-
   if type(fences) == 'boolean' and fences then
     fences = config.defaults.fences
   end
-
   return fences
 end
 
 local function insert_toc(line)
-  local H = md.get_headings()
-  -- FIXME
-  if not H then
-    vim.notify("No markdown headings", vim.log.levels.ERROR)
-    return
+  line = line or vim.api.nvim_win_get_cursor(0)[1]
+  -- For before_toc option = false,
+  -- When insert line is given, don't include headings before the insert line.
+  -- If insert line is not given, don't include headings before current
+  -- (cursor) line.
+  local start = line
+  if config.opts.headings and config.opts.headings.before_toc then
+    start = 0
   end
 
-  line = line or vim.api.nvim_win_get_cursor(0)[1]
-  local lines = toc.gen_toc_list(H)
+  local lines = {}
   local fences = get_fences()
 
-  if fences.enabled then
-    table.insert(lines, 1, '')
-    table.insert(lines, 1, fmt_fence_start(fences.start_text))
-    table.insert(lines, '')
-    table.insert(lines, fmt_fence_end(fences.end_text))
+  local H = md.get_headings(start)
+  if empty_or_nil(H) then
+    if fences.enabled then
+      lines = {
+        fmt_fence_start(fences.start_text),
+        '',
+        fmt_fence_end(fences.end_text),
+      }
+    else
+      vim.notify("No markdown headings", vim.log.levels.ERROR)
+      return
+    end
+  else
+    -- There are headings
+    lines = toc.gen_toc_list(H)
+
+    if fences.enabled then
+      table.insert(lines, 1, '')
+      table.insert(lines, 1, fmt_fence_start(fences.start_text))
+      table.insert(lines, '')
+      table.insert(lines, fmt_fence_end(fences.end_text))
+    end
   end
 
   vim.api.nvim_buf_set_lines(0, line, line, true, lines)
@@ -51,15 +68,15 @@ local function remove_toc()
   local fstart, fend = fmt_fence_start(fences.start_text), fmt_fence_end(fences.end_text)
 
   local locations = toc.find_fences(fstart, fend)
-  if not locations or (not locations.start and not locations.end_) then
+  if empty_or_nil(locations) or (falsey(locations.start) and falsey(locations.end_)) then
     vim.notify("No fences found!", vim.log.levels.ERROR)
     return
   end
-  if locations.start and not locations.end_ then
+  if locations.start and falsey(locations.end_) then
     vim.notify("No end fence found!", vim.log.levels.ERROR)
     return
   end
-  if not locations.start and locations.end_ then
+  if falsey(locations.start) and locations.end_ then
     vim.notify("No start fence found!", vim.log.levels.ERROR)
     return
   end
@@ -75,19 +92,27 @@ end
 
 local function update_toc()
   local locations = remove_toc()
-  if not locations then
+  if empty_or_nil(locations) then
     return
   end
   return insert_toc(locations.start-1)
 end
 
+local function _debug_show_headings()
+  vim.print(md.get_headings(vim.api.nvim_win_get_cursor(0)[1]))
+end
+
 local function handle_command(opts)
-  if opts == nil or not opts.fargs then
+  if empty_or_nil(opts) or empty_or_nil(opts.fargs) then
     print("Please supply a command")
     return
   end
 
   local cmd = opts.fargs[1]
+  if cmd == 'debug' then
+    return _debug_show_headings()
+  end
+
   local found = false
   for _, v in ipairs(M.commands) do
     if string.match(v, "^"..cmd) then
@@ -138,7 +163,7 @@ local function setup_autocmds()
 end
 
 local function remove_autocmds()
-  if not M.autocmds then
+  if empty_or_nil(M.autocmds) then
     return
   end
   for _, id in ipairs(M.autocmds) do
@@ -147,6 +172,7 @@ local function remove_autocmds()
 end
 
 function M.setup(opts)
+  vim.g.mdtoc_loaded = 1
   config.merge_opts(opts)
   setup_autocmds()
   setup_commands()

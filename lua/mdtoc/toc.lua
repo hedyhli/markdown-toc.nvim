@@ -1,12 +1,18 @@
 local config = require('mdtoc/config')
+local utils = require('mdtoc/utils')
+
+local empty_or_nil = utils.empty_or_nil
+local falsey = utils.falsey
+local truthy = utils.truthy
 
 local M = {}
-M.formatters = {}
+M.link_formatters = {}
 
 
+---Link formatter based on GitHub Flavoured Markdown
 ---@param existing_headings table
 ---@param heading string
-function M.formatters.gfm(existing_headings, heading)
+function M.link_formatters.gfm(existing_headings, heading)
   heading = heading:lower()
 
   -- Strip leading and trailing underscores
@@ -40,17 +46,19 @@ end
 ---@param headings table
 ---@return table lines
 function M.gen_toc_list(headings)
-  local markers = config.opts.toc_list.markers
+  local toc_config = config.opts.toc_list
+  local markers = toc_config.markers
   if type(markers) == 'string' then
     markers = { markers }
   end
-  if not config.opts.toc_list.cycle_markers then
+  if not toc_config.cycle_markers then
     markers = { markers[1] }
   end
-  local indent_size = config.opts.toc_list.indent_size
+  local indent_size = toc_config.indent_size
   if type(indent_size) == 'function' then
     indent_size = indent_size()
   end
+  local item_formatter = toc_config.item_formatter
   local lines = {}
 
   ---@param heading table
@@ -63,10 +71,19 @@ function M.gen_toc_list(headings)
 
     marker_index = (marker_index - 1) % #markers + 1
     local marker = markers[marker_index]
-    local line = string.format("%s%s [%s](#%s)" , string.rep(' ', indent), marker, heading.name, heading.link)
+    local fmt_info = {
+      name = heading.name,
+      link = heading.link,
+      indent = (" "):rep(indent),
+      marker = marker,
+      num_children = #heading.children,
+      line = heading.range.start,
+      ['end'] = heading.range['end'],
+    }
+    local line = item_formatter(fmt_info, toc_config.item_format_string)
     table.insert(lines, line)
 
-    if heading.children then
+    if not empty_or_nil(heading.children) then
       indent = indent + indent_size
       marker_index = marker_index + 1
 
