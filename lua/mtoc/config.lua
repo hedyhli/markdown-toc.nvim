@@ -6,7 +6,7 @@ M.defaults = {
     -- TODO
     -- Headings to include
     -- top_level = false,
-    -- Include headings before the TOC (or current line for `:Mdtoc insert`)
+    -- Include headings before the TOC (or current line for `:Mtoc insert`)
     before_toc = false,
     -- Supports regex
     filter_blacklist = {},
@@ -50,8 +50,8 @@ M.defaults = {
     enabled = true,
     -- These fence texts are wrapped within "<!-- % -->", where the '%' is
     -- substituted with the text.
-    start_text = "mdtoc.nvim start",
-    end_text = "mdtoc.nvim end"
+    start_text = "mtoc.nvim start",
+    end_text = "mtoc.nvim end"
     -- An empty line is inserted on top and below the TOC list before the being
     -- wrapped with the fence texts, same as vim-markdown-toc.
   },
@@ -62,7 +62,7 @@ M.defaults = {
   auto_update = {
     enabled = true,
     -- This allows the TOC to be refreshed silently on save for any markdown file.
-    -- The refresh operation uses `Mdtoc update` and does NOT create the TOC if
+    -- The refresh operation uses `Mtoc update` and does NOT create the TOC if
     -- it does not exist.
     events = { "BufWritePre" },
     pattern = "*.{md,mdown,mkd,mkdn,markdown,mdwn}",

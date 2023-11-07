@@ -1,9 +1,9 @@
-local config = require('mdtoc/config')
-local utils = require('mdtoc/utils')
+local config = require('mtoc/config')
+local utils = require('mtoc/utils')
 
 local empty_or_nil = utils.empty_or_nil
-local falsey = utils.falsey
-local truthy = utils.truthy
+-- local falsey = utils.falsey
+-- local truthy = utils.truthy
 
 local M = {}
 M.link_formatters = {}

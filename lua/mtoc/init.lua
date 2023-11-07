@@ -1,7 +1,7 @@
-local md = require('mdtoc/markdown')
-local toc = require('mdtoc/toc')
-local config = require('mdtoc/config')
-local utils = require('mdtoc/utils')
+local md = require('mtoc/markdown')
+local toc = require('mtoc/toc')
+local config = require('mtoc/config')
+local utils = require('mtoc/utils')
 
 local empty_or_nil = utils.empty_or_nil
 local falsey = utils.falsey
@@ -139,7 +139,7 @@ local function handle_command(opts)
 end
 
 local function setup_commands()
-  vim.api.nvim_create_user_command("Mdtoc", handle_command, {
+  vim.api.nvim_create_user_command("Mtoc", handle_command, {
     nargs = 1,
     complete = function()
       return M.commands
@@ -156,7 +156,7 @@ local function setup_autocmds()
     end
     local id = vim.api.nvim_create_autocmd(aup.events, {
       pattern = aup.pattern,
-      command = "silent! Mdtoc update",
+      command = "silent! Mtoc update",
     })
     table.insert(M, id)
   end
@@ -172,7 +172,7 @@ local function remove_autocmds()
 end
 
 function M.setup(opts)
-  vim.g.mdtoc_loaded = 1
+  vim.g.mtoc_loaded = 1
   config.merge_opts(opts)
   setup_autocmds()
   setup_commands()

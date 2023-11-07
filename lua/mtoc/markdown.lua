@@ -1,5 +1,5 @@
-local toc = require('mdtoc/toc')
-local config = require('mdtoc/config')
+local toc = require('mtoc/toc')
+local config = require('mtoc/config')
 
 local M = {}
 
