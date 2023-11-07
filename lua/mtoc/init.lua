@@ -63,13 +63,15 @@ local function insert_toc(line)
   vim.api.nvim_buf_set_lines(0, line, line, true, lines)
 end
 
-local function remove_toc()
+local function remove_toc(not_found_ok)
   local fences = get_fences()
   local fstart, fend = fmt_fence_start(fences.start_text), fmt_fence_end(fences.end_text)
 
   local locations = toc.find_fences(fstart, fend)
   if empty_or_nil(locations) or (falsey(locations.start) and falsey(locations.end_)) then
-    vim.notify("No fences found!", vim.log.levels.ERROR)
+    if not not_found_ok then
+      vim.notify("No fences found!", vim.log.levels.ERROR)
+    end
     return
   end
   if locations.start and falsey(locations.end_) then
@@ -91,9 +93,17 @@ local function remove_toc()
 end
 
 local function update_toc()
-  local locations = remove_toc()
+  local locations = remove_toc(false)
   if empty_or_nil(locations) then
     return
+  end
+  return insert_toc(locations.start-1)
+end
+
+local function update_or_remove_toc()
+  local locations = remove_toc(true)
+  if empty_or_nil(locations) then
+    return insert_toc()
   end
   return insert_toc(locations.start-1)
 end
@@ -104,8 +114,7 @@ end
 
 local function handle_command(opts)
   if empty_or_nil(opts) or empty_or_nil(opts.fargs) then
-    print("Please supply a command")
-    return
+    return update_or_remove_toc()
   end
 
   local cmd = opts.fargs[1]
@@ -140,7 +149,7 @@ end
 
 local function setup_commands()
   vim.api.nvim_create_user_command("Mtoc", handle_command, {
-    nargs = 1,
+    nargs = '?',
     complete = function()
       return M.commands
     end,
