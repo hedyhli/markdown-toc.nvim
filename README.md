@@ -6,10 +6,13 @@ Almost fully replaces vim-markdown-toc, written in 100% lua.
 
 - Supports setext style headings (`======` and `------`).
 - Supports GitHub Flavoured Markdown links by default. If you want to use
-  another link format, you can set your own [formatter
+  another link format a better configuration structure for this is
+  [planned](#todo), but for now you can set your own [formatter
   function](#advanced-examples).
 - You can disable fences but keep the updating feature by manually selecting
   your table of contents in visual mode, then running `:Mtoc`
+
+<!-- panvimdoc-ignore-start -->
 
 **Table of contents**
 
@@ -24,8 +27,10 @@ Dog-fooding ;)
   * [Commands](#commands)
   * [Full Configuration](#full-configuration)
     * [Advanced Examples](#advanced-examples)
+  * [TODO](#todo)
 
 <!-- mtoc-end -->
+<!-- panvimdoc-ignore-end -->
 
 ## Install
 
@@ -38,12 +43,15 @@ Example for Lazy.nvim:
 {
   "hedyhli/markdown-toc.nvim",
   ft = "markdown",  -- Lazy load on markdown filetype
-  cmd = { "Mtoc" }, -- Lazy load on "Mtoc" command
+  cmd = { "Mtoc" }, -- Or, lazy load on "Mtoc" command
   opts = {
     -- Your configuration here (optional)
   },
 },
 ```
+
+Making use of lazy-loading with `ft` means that `Mtoc` commands won't be
+available until a markdown file is opened.
 
 Note that the repo is called `markdown-toc.nvim`, but the lua module and
 commands are prefixed with `mtoc` rather than `markdown-toc`.
@@ -353,4 +361,11 @@ toc_list = {
 Remove `:lower()` to avoid decapitalizing already capitalized rest of words
 (like the case for acronyms).
 
-<!-- ## API -->
+
+## TODO
+
+- Types
+- Tests
+- Lua API
+- Link style chooser
+
