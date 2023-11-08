@@ -1,8 +1,8 @@
 <!-- panvimdoc-ignore-start -->
 
 # markdown-toc.nvim
-
 <!-- panvimdoc-ignore-end -->
+
 
 Generate and update table of contents list (with links) for markdown.
 
@@ -366,6 +366,7 @@ Remove `:lower()` to avoid decapitalizing already capitalized rest of words
 (like the case for acronyms).
 
 
+<!-- panvimdoc-ignore-start -->
 ## TODO
 
 - Types
@@ -373,3 +374,4 @@ Remove `:lower()` to avoid decapitalizing already capitalized rest of words
 - Lua API
 - Link style chooser
 
+<!-- panvimdoc-ignore-end -->
