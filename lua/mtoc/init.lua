@@ -22,8 +22,12 @@ local function get_fences()
   return fences
 end
 
-local function insert_toc(line)
-  line = line or vim.api.nvim_win_get_cursor(0)[1]
+local function insert_toc(opts)
+  if not opts then
+    opts = {}
+  end
+
+  local line = opts.line or vim.api.nvim_win_get_cursor(0)[1]
   -- For before_toc option = false,
   -- When insert line is given, don't include headings before the insert line.
   -- If insert line is not given, don't include headings before current
@@ -35,10 +39,11 @@ local function insert_toc(line)
 
   local lines = {}
   local fences = get_fences()
+  local use_fence = fences.enabled and not opts.disable_fence
 
   local H = md.get_headings(start)
   if empty_or_nil(H) then
-    if fences.enabled then
+    if use_fence then
       lines = {
         fmt_fence_start(fences.start_text),
         '',
@@ -49,10 +54,10 @@ local function insert_toc(line)
       return
     end
   else
-    -- There are headings
     lines = toc.gen_toc_list(H)
+    lines = config.opts.toc_list.post_processor(lines)
 
-    if fences.enabled then
+    if use_fence then
       table.insert(lines, 1, '')
       table.insert(lines, 1, fmt_fence_start(fences.start_text))
       table.insert(lines, '')
@@ -92,20 +97,34 @@ local function remove_toc(not_found_ok)
   return locations
 end
 
-local function update_toc()
+local function update_toc(opts)
+  if opts.range_start and opts.range_end then
+    utils.delete_lines(opts.range_start, opts.range_end)
+    local use_fence = opts.bang
+    return insert_toc({ line = opts.range_start-1, disable_fence = not use_fence })
+  end
+
   local locations = remove_toc(false)
   if empty_or_nil(locations) then
     return
   end
-  return insert_toc(locations.start-1)
+  opts.line = locations.start-1
+  return insert_toc(opts)
 end
 
-local function update_or_remove_toc()
-  local locations = remove_toc(true)
-  if empty_or_nil(locations) then
-    return insert_toc()
+local function update_or_remove_toc(opts)
+  if opts.range_start and opts.range_end then
+    return update_toc(opts)
   end
-  return insert_toc(locations.start-1)
+
+  local locations = remove_toc(true)
+  opts = opts or {}
+  if empty_or_nil(locations) then
+    opts.line = nil
+    return insert_toc(opts)
+  end
+  opts.line = locations.start-1
+  return insert_toc(opts)
 end
 
 local function _debug_show_headings()
@@ -114,14 +133,25 @@ local function _debug_show_headings()
 end
 
 local function handle_command(opts)
-  if empty_or_nil(opts) or empty_or_nil(opts.fargs) then
-    return update_or_remove_toc()
+  local fnopts = { bang = opts.bang }
+  if opts.range == 2 then
+    fnopts.range_start = opts.line1
+    fnopts.range_end = opts.line2
+  end
+
+  if empty_or_nil(opts.fargs) then
+    return update_or_remove_toc(fnopts)
   end
 
   local cmd = opts.fargs[1]
   if cmd == 'debug' then
     return _debug_show_headings()
   end
+  if cmd:sub(#cmd, #cmd) == '!' then
+    fnopts.bang = true
+    cmd = cmd:sub(1, #cmd-1)
+  end
+
 
   local found = false
   for _, v in ipairs(M.commands) do
@@ -138,9 +168,9 @@ local function handle_command(opts)
   end
 
   if cmd == "insert" then
-    return insert_toc()
+    return insert_toc(fnopts)
   elseif cmd == "update" then
-    return update_toc()
+    return update_toc(fnopts)
   elseif cmd == "remove" then
     return remove_toc()
   else
@@ -151,6 +181,8 @@ end
 local function setup_commands()
   vim.api.nvim_create_user_command("Mtoc", handle_command, {
     nargs = '?',
+    range = true,
+    bang = true,
     complete = function()
       return M.commands
     end,

@@ -44,6 +44,10 @@ M.defaults = {
       end)
       return s
     end,
+
+    -- Called after an array of lines for the ToC is computed. This does not
+    -- include the fences even if it's enabled.
+    post_processor = function(lines) return lines end
   },
 
   -- Table or boolean. Set to true to use these defaults, set to false to disable completely.
@@ -88,6 +92,7 @@ function M.resolve_shortcut_opts()
       M.opts.fences.enabled = false
     end
   end
+
   value = M.opts.auto_update
   if type(value) == 'boolean' then
     M.opts.auto_update = M.defaults.auto_update
@@ -95,6 +100,7 @@ function M.resolve_shortcut_opts()
       M.opts.auto_update.enabled = false
     end
   end
+
   if type(M.opts.auto_update.events) == 'string' then
     M.opts.auto_update.events = { M.opts.auto_update.events }
   end
