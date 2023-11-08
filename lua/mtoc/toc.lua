@@ -1,9 +1,4 @@
 local config = require('mtoc/config')
-local utils = require('mtoc/utils')
-
-local empty_or_nil = utils.empty_or_nil
--- local falsey = utils.falsey
--- local truthy = utils.truthy
 
 local M = {}
 M.link_formatters = {}
@@ -42,61 +37,6 @@ function M.link_formatters.gfm(existing_headings, heading)
   return heading_str
 end
 
----Return a list of lines of TOC list given a list of heading trees
----@param headings table
----@return table lines
-function M.gen_toc_list(headings)
-  local toc_config = config.opts.toc_list
-  local markers = toc_config.markers
-  if not toc_config.cycle_markers then
-    markers = { markers[1] }
-  end
-  local indent_size = toc_config.indent_size
-  if type(indent_size) == 'function' then
-    indent_size = indent_size()
-  end
-  local item_formatter = toc_config.item_formatter
-  local lines = {}
-
-  ---@param heading table
-  ---@param indent integer
-  ---@param marker_index integer
-  local function _gen_toc_list(heading, indent, marker_index)
-    if not heading then
-      return
-    end
-
-    marker_index = (marker_index - 1) % #markers + 1
-    local marker = markers[marker_index]
-    local fmt_info = {
-      name = heading.name,
-      link = heading.link,
-      indent = (" "):rep(indent),
-      marker = marker,
-      num_children = #heading.children,
-      line = heading.range.start,
-      ['end'] = heading.range['end'],
-    }
-    local line = item_formatter(fmt_info, toc_config.item_format_string)
-    table.insert(lines, line)
-
-    if not empty_or_nil(heading.children) then
-      indent = indent + indent_size
-      marker_index = marker_index + 1
-
-      for _, child in ipairs(heading.children) do
-        _gen_toc_list(child, indent, marker_index)
-      end
-    end
-  end
-
-  for _, heading in ipairs(headings) do
-    _gen_toc_list(heading, 0, 1)
-  end
-
-  return lines
-end
-
 ---@see find_fences
 local function _find_fences(fstart, fend, lines)
   local locations = {}
@@ -122,6 +62,7 @@ local function _find_fences(fstart, fend, lines)
   return locations
 end
 
+---Find fences function for start and end fences being the same string
 ---@see find_fences
 local function _find_fences_same(fence, lines)
   local in_code = false
@@ -145,10 +86,10 @@ local function _find_fences_same(fence, lines)
   return locations
 end
 
----Return a table containing line number of start and end fences
----@param fstart string
----@param fend string
----@return table locations { start = line, end_ = line }
+---Return a table containing line numbers of start and end fences
+---@param fstart string   String of fence start
+---@param fend string     String of fence end
+---@return table locations `{ start = start_lineno, end_ = end_lineno }`
 function M.find_fences(fstart, fend)
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   if fstart ~= fend then
@@ -157,13 +98,78 @@ function M.find_fences(fstart, fend)
   return _find_fences_same(fstart, lines)
 end
 
-function M._test(start_from)
+---Returns a list of strings representing the lines of the ToC list.
+---Calls both link formatter and item formatter based on config.
+---@param start_from integer|nil The line number before which, headings will be ignored
+---@return string[] lines List of lines to be inserted as ToC
+function M.gen_toc_list(start_from)
+  start_from = start_from or 0
+  local toc_config = config.opts.toc_list
+
+  ---@type string|string[]
+  local markers = toc_config.markers
+  local marker_index = 1
+  if not toc_config.cycle_markers then
+    markers = { markers[1] }
+  end
+
+  local indent_size = toc_config.indent_size
+  if type(indent_size) == 'function' then
+    indent_size = indent_size()
+  end
+
+  local item_formatter = toc_config.item_formatter
+
+  local is_inside_code_block = false
+  local prev_depth = 0
+  local lines = {}
+  local all_heading_links = {}
+
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
+    if string.find(line, '^```') then
+      is_inside_code_block = not is_inside_code_block
+    end
+    if is_inside_code_block then
+      goto nextline
+    end
+
+    local prefix, name = string.match(line, '^(#+)%s+(.+)$')
+    if not prefix or not name or #prefix > 6 then
+      goto nextline
+    end
+
+    local depth = #prefix
+
+    if prev_depth + 1 < depth then
+      depth = prev_depth + 1
+    end
+    prev_depth = depth
+
+    marker_index = (marker_index - 1) % #markers + 1
+    local marker = markers[marker_index]
+    local link = M.link_formatters.gfm(all_heading_links, name)
+    local fmt_info = {
+      name = name,
+      link = link,
+      indent = (" "):rep((depth-1) * indent_size),
+      marker = marker,
+      raw_line = line,
+    }
+
+    local item = item_formatter(fmt_info, toc_config.item_format_string)
+    table.insert(lines, item)
+    ::nextline::
+  end
+  return lines
+end
+
+function M._test_tree(start_from)
   local is_inside_code_block = false
   local dstack = { 1 }
   local pstack = { { children = {} } }
   local tree = pstack
 
-  for i, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
     if string.find(line, '^```') then
       is_inside_code_block = not is_inside_code_block
     end
@@ -185,8 +191,7 @@ function M._test(start_from)
 
     local entry = {
       name = name,
-      lineno = i, -- TODO: rename
-      raw_line = line, -- TODO: document
+      raw_line = line,
       children = {},
     }
 

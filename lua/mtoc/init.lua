@@ -1,17 +1,14 @@
-local md = require('mtoc/markdown')
 local toc = require('mtoc/toc')
 local config = require('mtoc/config')
 local utils = require('mtoc/utils')
 
 local empty_or_nil = utils.empty_or_nil
 local falsey = utils.falsey
--- local truthy = utils.truthy
 
 local M = {}
 M.commands = {'insert', 'update', 'remove'}
 
 local function fmt_fence_start(fence) return '<!-- '..fence..' -->' end
-
 local function fmt_fence_end(fence) return '<!-- '..fence..' -->' end
 
 local function get_fences()
@@ -27,13 +24,8 @@ local function insert_toc(opts)
     opts = {}
   end
 
-  local line = opts.line or vim.api.nvim_win_get_cursor(0)[1]
-  -- For before_toc option = false,
-  -- When insert line is given, don't include headings before the insert line.
-  -- If insert line is not given, don't include headings before current
-  -- (cursor) line.
-  local start = line
-  if config.opts.headings and config.opts.headings.before_toc then
+  local start = opts.line or utils.current_line()
+  if config.opts.headings.before_toc then
     start = 0
   end
 
@@ -41,8 +33,8 @@ local function insert_toc(opts)
   local fences = get_fences()
   local use_fence = fences.enabled and not opts.disable_fence
 
-  local H = md.get_headings(start)
-  if empty_or_nil(H) then
+  lines = toc.gen_toc_list(start)
+  if empty_or_nil(lines) then
     if use_fence then
       lines = {
         fmt_fence_start(fences.start_text),
@@ -54,7 +46,6 @@ local function insert_toc(opts)
       return
     end
   else
-    lines = toc.gen_toc_list(H)
     lines = config.opts.toc_list.post_processor(lines)
 
     if use_fence then
@@ -65,7 +56,7 @@ local function insert_toc(opts)
     end
   end
 
-  vim.api.nvim_buf_set_lines(0, line, line, true, lines)
+  utils.insert_lines(start, lines)
 end
 
 local function remove_toc(not_found_ok)
@@ -128,8 +119,9 @@ local function update_or_remove_toc(opts)
 end
 
 local function _debug_show_headings()
-  -- vim.print(md.get_headings(vim.api.nvim_win_get_cursor(0)[1]))
-  vim.print(toc._test(vim.api.nvim_win_get_cursor(0)[1]))
+  local line = utils.current_line()
+  local lines = toc.gen_toc_list(line)
+  utils.insert_lines(line, lines)
 end
 
 local function handle_command(opts)
@@ -204,7 +196,8 @@ local function setup_autocmds()
   end
 end
 
-local function remove_autocmds()
+---Remove autocmds that were set up by this plugin
+function M.remove_autocmds()
   if empty_or_nil(M.autocmds) then
     return
   end
@@ -213,6 +206,7 @@ local function remove_autocmds()
   end
 end
 
+---Merge user opts with default opts and set up autocmds and commands
 function M.setup(opts)
   vim.g.mtoc_loaded = 1
   config.merge_opts(opts)
@@ -220,9 +214,10 @@ function M.setup(opts)
   setup_commands()
 end
 
+---Merge user opts with default opts and reset autocmds based on new options
 function M.update_config(opts)
   config.update_opts(opts)
-  remove_autocmds()
+  M.remove_autocmds()
   setup_autocmds()
 end
 

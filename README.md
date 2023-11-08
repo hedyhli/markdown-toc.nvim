@@ -15,17 +15,17 @@ Almost fully replaces vim-markdown-toc, written in 100% lua.
 
 Dog-fooding ;)
 
-<!-- mtoc start -->
+<!-- mtoc-start -->
 
 * [Install](#install)
-* [Setup](#setup)
+  * [Setup](#setup)
     * [Common configuration options](#common-configuration-options)
     * [Examples](#examples)
-* [Commands](#commands)
-* [Full Configuration](#full-configuration)
+  * [Commands](#commands)
+  * [Full Configuration](#full-configuration)
     * [Advanced Examples](#advanced-examples)
 
-<!-- mtoc end -->
+<!-- mtoc-end -->
 
 ## Install
 
@@ -85,8 +85,8 @@ table in the `opts` key if you're using Lazy.nvim.
     enabled = true,
     -- These fence texts are wrapped within "<!-- % -->", where the '%' is
     -- substituted with the text.
-    start_text = "mtoc start",
-    end_text = "mtoc end"
+    start_text = "mtoc-start",
+    end_text = "mtoc-end"
     -- An empty line is inserted on top and below the ToC list before the being
     -- wrapped with the fence texts, same as vim-markdown-toc.
   },
@@ -220,16 +220,16 @@ These shortcuts are shown in `[square brackets]` below.
     -- Integer or a function that returns an integer.
     -- If function, it is called every time the ToC is regenerated. This allows the use
     -- of retrieving buffer-local settings like shiftwidth.
-    indent_size = 4,
+    indent_size = 2,
 
     -- Remove the ${indent} below, or set indent_size=0 to have the whole ToC
     -- be a flattened list.
     item_format_string = "${indent}${marker} [${name}](#${link})",
 
     ---Formatter for a single ToC list item.
-    --`item_info` has fields `name`, `link`, `marker`, `indent`, `line`, `['end']`,
-    --`num_children`. To change the format of each heading item but keep the
-    --same field substitution syntax, simply change `item_format_string`.
+    -- `item_info` has fields `name`, `link`, `marker`, `indent`, To change the
+    -- format of each heading item but keep the same field substitution syntax,
+    -- simply change `item_format_string`.
     ---@param item_info table Information for current heading item.
     ---@param fmtstr string from `item_format_string` config
     ---@return string formatted_item
@@ -247,8 +247,8 @@ These shortcuts are shown in `[square brackets]` below.
     enabled = true,
     -- These fence texts are wrapped within "<!-- % -->", where the '%' is
     -- substituted with the text.
-    start_text = "mtoc.nvim start",
-    end_text = "mtoc.nvim end"
+    start_text = "mtoc start",
+    end_text = "mtoc end"
     -- An empty line is inserted on top and below the ToC list before the being
     -- wrapped with the fence texts, same as vim-markdown-toc.
   },
