@@ -1,4 +1,8 @@
+<!-- panvimdoc-ignore-start -->
+
 # markdown-toc.nvim
+
+<!-- panvimdoc-ignore-end -->
 
 Generate and update table of contents list (with links) for markdown.
 
