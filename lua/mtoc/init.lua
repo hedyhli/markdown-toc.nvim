@@ -109,7 +109,8 @@ local function update_or_remove_toc()
 end
 
 local function _debug_show_headings()
-  vim.print(md.get_headings(vim.api.nvim_win_get_cursor(0)[1]))
+  -- vim.print(md.get_headings(vim.api.nvim_win_get_cursor(0)[1]))
+  vim.print(toc._test(vim.api.nvim_win_get_cursor(0)[1]))
 end
 
 local function handle_command(opts)

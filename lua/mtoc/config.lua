@@ -1,35 +1,37 @@
 local M = {}
 
 M.defaults = {
-  -- Config relating to fetching of headings to be included in TOC
+  -- Config relating to fetching of headings to be included in ToC
   headings = {
-    -- TODO
-    -- Headings to include
-    -- top_level = false,
-    -- Include headings before the TOC (or current line for `:Mtoc insert`)
+    -- Include headings before the ToC (or current line for `:Mtoc insert`)
     before_toc = false,
-    -- Supports regex
-    filter_blacklist = {},
+    -- Either list of lua patterns,
+    -- or a function that returns boolean (true means to EXCLUDE heading)
+    exclude = {},
   },
 
-  -- Config relating to the style and format of the TOC
+  -- Config relating to the style and format of the ToC
   toc_list = {
     -- string or list of strings (for cycling)
     -- If cycle_markers = false and markers is a list, only the first is used.
+    -- You can set to '1.' to use a automatically numbered list for ToC (if
+    -- your markdown render supports it).
     markers = '*',
     cycle_markers = false,
     -- Example config for cycling markers:
     ----- markers = {'*', '+', '-'},
     ----- cycle_markers = true,
 
-    -- Integer or function that returns an integer
+    -- Integer or function that returns an integer.
+    -- If function, it is called every time the ToC is regenerated. This allows the use
+    -- of retrieving buffer-local settings like shiftwidth.
     indent_size = 4,
 
-    -- Remove the ${indent} below, or set indent_size=0 to have the whole TOC
+    -- Remove the ${indent} below, or set indent_size=0 to have the whole ToC
     -- be a flattened list.
     item_format_string = "${indent}${marker} [${name}](#${link})",
 
-    ---Formatter for a single TOC list item.
+    ---Formatter for a single ToC list item.
     --`item_info` has fields `name`, `link`, `marker`, `indent`, `line`, `['end']`,
     --`num_children`. To change the format of each heading item but keep the
     --same field substitution syntax, simply change `item_format_string`.
@@ -50,9 +52,9 @@ M.defaults = {
     enabled = true,
     -- These fence texts are wrapped within "<!-- % -->", where the '%' is
     -- substituted with the text.
-    start_text = "mtoc.nvim start",
-    end_text = "mtoc.nvim end"
-    -- An empty line is inserted on top and below the TOC list before the being
+    start_text = "mtoc start",
+    end_text = "mtoc end"
+    -- An empty line is inserted on top and below the ToC list before the being
     -- wrapped with the fence texts, same as vim-markdown-toc.
   },
 
@@ -61,8 +63,8 @@ M.defaults = {
   -- Fields events and pattern are used unprocessed for creating autocmds.
   auto_update = {
     enabled = true,
-    -- This allows the TOC to be refreshed silently on save for any markdown file.
-    -- The refresh operation uses `Mtoc update` and does NOT create the TOC if
+    -- This allows the ToC to be refreshed silently on save for any markdown file.
+    -- The refresh operation uses `Mtoc update` and does NOT create the ToC if
     -- it does not exist.
     events = { "BufWritePre" },
     pattern = "*.{md,mdown,mkd,mkdn,markdown,mdwn}",
@@ -75,14 +77,43 @@ M.defaults = {
   -- },
 }
 
-M.opts = {}
+M.opts = M.defaults
+
+---Should be called after merge_opts (ensure config.opts is non-empty)
+function M.resolve_shortcut_opts()
+  local value = M.opts.fences
+  if type(value) == 'boolean' then
+    M.opts.fences = M.defaults.fences
+    if not value then
+      M.opts.fences.enabled = false
+    end
+  end
+  value = M.opts.auto_update
+  if type(value) == 'boolean' then
+    M.opts.auto_update = M.defaults.auto_update
+    if not value then
+      M.opts.auto_update.enabled = false
+    end
+  end
+  if type(M.opts.auto_update.events) == 'string' then
+    M.opts.auto_update.events = { M.opts.auto_update.events }
+  end
+  if type(M.opts.toc_list.markers) == 'string' then
+    M.opts.toc_list.markers = { M.opts.toc_list.markers }
+  end
+  if type(M.opts.headings.exclude) == 'string' then
+    M.opts.headings.exclude = { M.opts.headings.exclude }
+  end
+end
 
 function M.merge_opts(opts)
   M.opts = vim.tbl_deep_extend('force', {}, M.defaults, opts or {})
+  M.resolve_shortcut_opts()
 end
 
 function M.update_opts(opts)
   M.opts = vim.tbl_deep_extend('force', {}, M.opts, opts or {})
+  M.resolve_shortcut_opts()
 end
 
 return M
