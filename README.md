@@ -21,13 +21,13 @@ Dog-fooding ;)
 <!-- mtoc-start -->
 
 * [Install](#install)
-  * [Setup](#setup)
-    * [Common configuration options](#common-configuration-options)
-    * [Examples](#examples)
-  * [Commands](#commands)
-  * [Full Configuration](#full-configuration)
-    * [Advanced Examples](#advanced-examples)
-  * [TODO](#todo)
+* [Setup](#setup)
+  * [Common configuration options](#common-configuration-options)
+  * [Examples](#examples)
+* [Commands](#commands)
+* [Full Configuration](#full-configuration)
+  * [Advanced Examples](#advanced-examples)
+* [TODO](#todo)
 
 <!-- mtoc-end -->
 <!-- panvimdoc-ignore-end -->

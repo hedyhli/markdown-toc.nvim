@@ -121,7 +121,7 @@ function M.gen_toc_list(start_from)
   local item_formatter = toc_config.item_formatter
 
   local is_inside_code_block = false
-  local prev_depth = 0
+  local prev_depth = 1
   local lines = {}
   local all_heading_links = {}
 
@@ -151,7 +151,7 @@ function M.gen_toc_list(start_from)
     local fmt_info = {
       name = name,
       link = link,
-      indent = (" "):rep((depth-1) * indent_size),
+      indent = (" "):rep((depth-2) * indent_size),
       marker = marker,
       raw_line = line,
     }
