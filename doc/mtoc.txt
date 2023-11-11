@@ -1,4 +1,4 @@
-*mtoc.txt*            For NVIM v0.5.0            Last change: 2023 November 08
+*mtoc.txt*            For NVIM v0.5.0            Last change: 2023 November 11
 
 ==============================================================================
 Table of Contents                                     *mtoc-table-of-contents*
@@ -107,6 +107,16 @@ table in the `opts` key if you’re using Lazy.nvim.
 These are the common config options. For a full list including advanced
 customizations including indent size and list item format, please see
 |mtoc-full-configuration|.
+
+
+FENCES ~
+
+Note that whenever you change your fence text, you must either edit all
+existing fences by hand if you wish to retain auto-update feature, or you can
+remove + insert, or visual select the whole range including fence, and use
+`:'<,'>Mtoc u!`.
+
+See |mtoc-commands|.
 
 
 EXAMPLES ~
