@@ -27,6 +27,7 @@ Dog-fooding ;)
 * [Install](#install)
 * [Setup](#setup)
   * [Common configuration options](#common-configuration-options)
+  * [Fences](#fences)
   * [Examples](#examples)
 * [Commands](#commands)
 * [Full Configuration](#full-configuration)
@@ -124,6 +125,13 @@ These are the common config options. For a full list including advanced
 customizations including indent size and list item format, please see [Full
 Configuration](#full-configuration).
 
+### Fences
+
+Note that whenever you change your fence text, you must either edit all existing
+fences by hand if you wish to retain auto-update feature, or you can remove +
+insert, or visual select the whole range including fence, and use `:'<,'>Mtoc u!`.
+
+See [commands](#commands).
 
 ### Examples
 
