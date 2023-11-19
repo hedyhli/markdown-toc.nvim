@@ -1,5 +1,6 @@
 local M = {}
 
+---@type mtoc.Config
 M.defaults = {
   -- Config relating to fetching of headings to be included in ToC
   headings = {
@@ -17,7 +18,7 @@ M.defaults = {
     -- If cycle_markers = false and markers is a list, only the first is used.
     -- You can set to '1.' to use a automatically numbered list for ToC (if
     -- your markdown render supports it).
-    markers = '*',
+    markers = { '*' },
     cycle_markers = false,
     -- Example config for cycling markers:
     ----- markers = {'*', '+', '-'},
@@ -83,10 +84,12 @@ M.defaults = {
   -- },
 }
 
+---@type mtoc.Config
 M.opts = M.defaults
 
 ---Should be called after merge_opts (ensure config.opts is non-empty)
 function M.resolve_shortcut_opts()
+  ---@type any
   local value = M.opts.fences
   if type(value) == 'boolean' then
     M.opts.fences = M.defaults.fences
@@ -104,21 +107,26 @@ function M.resolve_shortcut_opts()
   end
 
   if type(M.opts.auto_update.events) == 'string' then
+    ---@diagnostic disable-next-line
     M.opts.auto_update.events = { M.opts.auto_update.events }
   end
   if type(M.opts.toc_list.markers) == 'string' then
+    ---@diagnostic disable-next-line
     M.opts.toc_list.markers = { M.opts.toc_list.markers }
   end
   if type(M.opts.headings.exclude) == 'string' then
+    ---@diagnostic disable-next-line
     M.opts.headings.exclude = { M.opts.headings.exclude }
   end
 end
 
+---@param opts mtoc.UserConfig
 function M.merge_opts(opts)
   M.opts = vim.tbl_deep_extend('force', {}, M.defaults, opts or {})
   M.resolve_shortcut_opts()
 end
 
+---@param opts mtoc.UserConfig
 function M.update_opts(opts)
   M.opts = vim.tbl_deep_extend('force', {}, M.opts, opts or {})
   M.resolve_shortcut_opts()

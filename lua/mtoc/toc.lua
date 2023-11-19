@@ -5,7 +5,7 @@ M.link_formatters = {}
 
 
 ---Link formatter based on GitHub Flavoured Markdown
----@param existing_headings table
+---@param existing_headings { [string]: number }
 ---@param heading string
 function M.link_formatters.gfm(existing_headings, heading)
   heading = heading:lower()
@@ -161,57 +161,6 @@ function M.gen_toc_list(start_from)
     ::nextline::
   end
   return lines
-end
-
-function M._test_tree(start_from)
-  local is_inside_code_block = false
-  local dstack = { 1 }
-  local pstack = { { children = {} } }
-  local tree = pstack
-
-  for _, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
-    if string.find(line, '^```') then
-      is_inside_code_block = not is_inside_code_block
-    end
-    if is_inside_code_block then
-      goto nextline
-    end
-
-    local prefix, name = string.match(line, '^(#+)%s+(.+)$')
-    if not prefix or not name then
-      goto nextline
-    end
-
-    if #prefix > 6 then
-      -- Only 6 level headings are supported in markdown
-      goto nextline
-    end
-
-    local depth = #prefix + 1
-
-    local entry = {
-      name = name,
-      raw_line = line,
-      children = {},
-    }
-
-    for j = #dstack, 1, -1 do
-      if dstack[j] < depth then
-        table.insert(pstack[j].children, entry)
-        pstack[j+1] = entry
-        dstack[j+1] = depth
-        break
-      else
-        -- Pop
-        pstack[j] = nil
-        dstack[j] = nil
-      end
-    end
-
-    ::nextline::
-  end
-
-  return tree[1].children
 end
 
 return M

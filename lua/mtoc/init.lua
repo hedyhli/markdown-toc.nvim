@@ -207,6 +207,7 @@ function M.remove_autocmds()
 end
 
 ---Merge user opts with default opts and set up autocmds and commands
+---@param opts mtoc.UserConfig
 function M.setup(opts)
   vim.g.mtoc_loaded = 1
   config.merge_opts(opts)
@@ -215,6 +216,7 @@ function M.setup(opts)
 end
 
 ---Merge user opts with default opts and reset autocmds based on new options
+---@param opts mtoc.UserConfig
 function M.update_config(opts)
   config.update_opts(opts)
   M.remove_autocmds()
