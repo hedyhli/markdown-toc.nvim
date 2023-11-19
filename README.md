@@ -32,6 +32,7 @@ Dog-fooding ;)
 * [Commands](#commands)
 * [Full Configuration](#full-configuration)
   * [Advanced Examples](#advanced-examples)
+  * [Project-local configuration](#project-local-configuration)
 * [TODO](#todo)
 
 <!-- mtoc-end -->
@@ -223,6 +224,9 @@ These shortcuts are shown in `[square brackets]` below.
     -- or a function that takes a heading title and returns boolean (true means
     -- to EXCLUDE heading).
     exclude = {},
+    -- The first capture is for heading level ('###') and second is for the heading
+    -- title.
+    pattern = "^(#+)%s+(.+)$",
   },
 
   -- Config relating to the style and format of the ToC
@@ -372,6 +376,32 @@ toc_list = {
 ```
 Remove `:lower()` to avoid decapitalizing already capitalized rest of words
 (like the case for acronyms).
+
+Include only 2nd-level headings
+```lua
+headings = {
+  pattern = "^(##)%s+(.+)$",
+}
+```
+
+### Project-local configuration
+
+From nvim-0.9, secure loading of per-directory nvim configs are now supported.
+
+You can include this in your neovim config:
+
+```lua
+if vim.fn.has("nvim-0.9") == 1 then
+  o.exrc = true
+end
+```
+
+Then in your project root, create a file named `.nvim.lua`, with the following contents:
+```lua
+require('mtoc').update_config({
+  -- new opts to override
+})
+```
 
 
 <!-- panvimdoc-ignore-start -->

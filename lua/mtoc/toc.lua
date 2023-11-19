@@ -133,7 +133,7 @@ function M.gen_toc_list(start_from)
       goto nextline
     end
 
-    local prefix, name = string.match(line, '^(#+)%s+(.+)$')
+    local prefix, name = string.match(line, config.opts.headings.pattern)
     if not prefix or not name or #prefix > 6 then
       goto nextline
     end
