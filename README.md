@@ -392,15 +392,18 @@ You can include this in your neovim config:
 
 ```lua
 if vim.fn.has("nvim-0.9") == 1 then
-  o.exrc = true
+  vim.o.exrc = true
 end
 ```
 
 Then in your project root, create a file named `.nvim.lua`, with the following contents:
 ```lua
-require('mtoc').update_config({
-  -- new opts to override
-})
+local ok, mtoc = pcall(require, 'mtoc')
+if ok then
+  mtoc.update_config({
+    -- new opts to override
+  })
+end
 ```
 
 
