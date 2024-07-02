@@ -172,6 +172,8 @@ Cycling of markers produces a ToC list like this:
 To customize the indent size please see [full
 configurations](#full-configuration).
 
+[Advanced configuration patterns](#advanced-examples)
+
 
 ## Commands
 
@@ -405,6 +407,9 @@ if ok then
   })
 end
 ```
+
+Here's an example `.nvim.lua` in the wild that makes use of
+`mtoc.update_config`: <https://github.com/hedyhli/outline.nvim/blob/main/.nvim.lua>
 
 
 <!-- panvimdoc-ignore-start -->
