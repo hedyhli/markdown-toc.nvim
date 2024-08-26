@@ -125,6 +125,9 @@ function M.gen_toc_list(start_from)
   local lines = {}
   local all_heading_links = {}
 
+  local min_depth = math.huge
+  local headings = {}
+
   for _, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
     if string.find(line, '^```') then
       is_inside_code_block = not is_inside_code_block
@@ -151,19 +154,33 @@ function M.gen_toc_list(start_from)
     -- Strip embedded links in TOC: both in name and link.
     name = name:gsub("%[(.-)%]%(.-%)", "%1")
 
+    depth = depth - 1
+
     local link = M.link_formatters.gfm(all_heading_links, name)
     local fmt_info = {
       name = name,
       link = link,
-      indent = (" "):rep((depth-2) * indent_size),
+      depth = depth,
       marker = marker,
       raw_line = line,
     }
 
-    local item = item_formatter(fmt_info, toc_config.item_format_string)
-    table.insert(lines, item)
+    if depth < min_depth then
+      min_depth = depth
+    end
+    table.insert(headings, fmt_info)
     ::nextline::
   end
+
+  -- Write TOC
+  for _, fmt_info in ipairs(headings) do
+    -- Ensure lowest depth is 0
+    local depth = fmt_info.depth - min_depth
+    fmt_info.indent = (" "):rep(depth * indent_size)
+    local item = item_formatter(fmt_info, toc_config.item_format_string)
+    table.insert(lines, item)
+  end
+
   return lines
 end
 
