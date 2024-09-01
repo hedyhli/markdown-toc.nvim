@@ -8,7 +8,7 @@ M.link_formatters = {}
 ---@param existing_headings { [string]: number }
 ---@param heading string
 function M.link_formatters.gfm(existing_headings, heading)
-  heading = heading:lower()
+  heading = vim.fn.tolower(heading)
 
   -- Strip leading and trailing underscores
   heading = heading:gsub("^_+", ""):gsub("_+$", "")
