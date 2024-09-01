@@ -1,4 +1,4 @@
-*mtoc.txt*             For NVIM v0.5.0
+*mtoc.txt*            For NVIM v0.5.0
 
 ==============================================================================
 Table of Contents                                     *mtoc-table-of-contents*
@@ -359,6 +359,7 @@ Ensure all heading names are in Title Case when listed in ToC:
     toc_list = {
       item_formatter = function(item, fmtstr)
         local default_formatter = require('mtoc.config').defaults.toc_list.item_formatter
+        -- NOTE: Consider using `vim.fn.tolower/toupper` to support letters other than ASCII.
         item.name = item.name:gsub("(%a)([%w_']*)", function(a,b) return a:upper()..b:lower() end)
         return default_formatter(item, fmtstr)
       end,
