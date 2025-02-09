@@ -1,0 +1,10 @@
+return {
+  _all = {
+    coverage = false,
+    verbose = true,
+    pattern = "_spec%.lua$"
+  },
+  default = {
+    ROOT = {"tests"}
+  }
+} 
