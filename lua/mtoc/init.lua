@@ -88,14 +88,14 @@ local function remove_toc(not_found_ok)
   return locations
 end
 
-local function update_toc(opts)
+local function update_toc(opts, fail_ok)
   if opts.range_start and opts.range_end then
     utils.delete_lines(opts.range_start, opts.range_end)
     local use_fence = opts.bang
     return insert_toc({ line = opts.range_start-1, disable_fence = not use_fence })
   end
 
-  local locations = remove_toc(false)
+  local locations = remove_toc(fail_ok)
   if empty_or_nil(locations) then
     return
   end
@@ -162,7 +162,7 @@ local function handle_command(opts)
   if cmd == "insert" then
     return insert_toc(fnopts)
   elseif cmd == "update" then
-    return update_toc(fnopts)
+    return update_toc(fnopts, false)
   elseif cmd == "remove" then
     return remove_toc()
   else
@@ -190,7 +190,7 @@ local function setup_autocmds()
     end
     local id = vim.api.nvim_create_autocmd(aup.events, {
       pattern = aup.pattern,
-      command = "silent! Mtoc update",
+      callback = function() update_toc({}, true) end
     })
     table.insert(M, id)
   end
