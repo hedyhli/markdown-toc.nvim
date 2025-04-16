@@ -143,6 +143,12 @@ function M.gen_toc_list(start_from)
 
     local depth = #prefix
 
+    -- Track minimum depth seen so far to normalize levels
+    if depth < min_depth then
+      min_depth = depth
+    end
+
+    -- Ensure proper nesting - only allow going one level deeper than previous
     if prev_depth + 1 < depth then
       depth = prev_depth + 1
     end
@@ -154,8 +160,6 @@ function M.gen_toc_list(start_from)
     -- Strip embedded links in TOC: both in name and link.
     name = name:gsub("%[(.-)%]%(.-%)", "%1")
 
-    depth = depth - 1
-
     local link = M.link_formatters.gfm(all_heading_links, name)
     local fmt_info = {
       name = name,
@@ -165,9 +169,6 @@ function M.gen_toc_list(start_from)
       raw_line = line,
     }
 
-    if depth < min_depth then
-      min_depth = depth
-    end
     table.insert(headings, fmt_info)
     ::nextline::
   end
