@@ -49,9 +49,14 @@ local function insert_toc(opts)
     lines = config.opts.toc_list.post_processor(lines)
 
     if use_fence then
-      table.insert(lines, 1, '')
+      local pad = config.opts.toc_list.padding_lines
+      for _ = 1, pad do
+        table.insert(lines, 1, '')
+      end
       table.insert(lines, 1, fmt_fence_start(fences.start_text))
-      table.insert(lines, '')
+      for _ = 1, pad do
+        table.insert(lines, '')
+      end
       table.insert(lines, fmt_fence_end(fences.end_text))
     end
   end
