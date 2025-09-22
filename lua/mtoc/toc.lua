@@ -3,7 +3,6 @@ local config = require('mtoc/config')
 local M = {}
 M.link_formatters = {}
 
-
 ---Link formatter based on GitHub Flavoured Markdown
 ---@param existing_headings { [string]: number }
 ---@param heading string
@@ -121,12 +120,14 @@ function M.gen_toc_list(start_from)
   local item_formatter = toc_config.item_formatter
 
   local is_inside_code_block = false
-  local prev_depth = 1
+  -- Track the first heading depth to normalize indentation
+  local base_depth = nil         ---@type integer|nil
+  local prev_clamped_depth = nil ---@type integer|nil
   local lines = {}
   local all_heading_links = {}
-
-  local min_depth = math.huge
   local headings = {}
+  local min_depth_cfg = config.opts.headings.min_depth
+  local max_depth_cfg = config.opts.headings.max_depth
 
   for _, line in ipairs(vim.api.nvim_buf_get_lines(0, start_from, -1, false)) do
     if string.find(line, '^```') then
@@ -141,12 +142,25 @@ function M.gen_toc_list(start_from)
       goto nextline
     end
 
-    local depth = #prefix
+    local raw_depth = #prefix
 
-    if prev_depth + 1 < depth then
-      depth = prev_depth + 1
+    -- Apply optional min/max depth filters on raw heading level (H1=1..H6=6)
+    if (min_depth_cfg and raw_depth < min_depth_cfg) or (max_depth_cfg and raw_depth > max_depth_cfg) then
+      goto nextline
     end
-    prev_depth = depth
+
+    -- Establish base depth from the first included heading
+    if not base_depth then
+      base_depth = raw_depth
+      prev_clamped_depth = raw_depth
+    end
+
+    -- Clamp jumps to at most +1 from previous clamped depth
+    local clamped_depth = raw_depth
+    if prev_clamped_depth and prev_clamped_depth + 1 < raw_depth then
+      clamped_depth = prev_clamped_depth + 1
+    end
+    prev_clamped_depth = clamped_depth
 
     marker_index = (marker_index - 1) % #markers + 1
     local marker = markers[marker_index]
@@ -154,7 +168,8 @@ function M.gen_toc_list(start_from)
     -- Strip embedded links in TOC: both in name and link.
     name = name:gsub("%[(.-)%]%(.-%)", "%1")
 
-    depth = depth - 1
+    -- Normalize depth relative to base_depth so the first heading is at indent 0
+    local depth = clamped_depth - base_depth
 
     local link = M.link_formatters.gfm(all_heading_links, name)
     local fmt_info = {
@@ -165,17 +180,14 @@ function M.gen_toc_list(start_from)
       raw_line = line,
     }
 
-    if depth < min_depth then
-      min_depth = depth
-    end
     table.insert(headings, fmt_info)
     ::nextline::
   end
 
   -- Write TOC
   for _, fmt_info in ipairs(headings) do
-    -- Ensure lowest depth is 0
-    local depth = fmt_info.depth - min_depth
+    -- Depth is already normalized so lowest depth is 0
+    local depth = fmt_info.depth
     fmt_info.indent = (" "):rep(depth * indent_size)
     local item = item_formatter(fmt_info, toc_config.item_format_string)
     table.insert(lines, item)
