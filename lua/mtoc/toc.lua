@@ -107,6 +107,10 @@ function M.gen_toc_list(start_from)
 
   ---@type string|string[]
   local markers = toc_config.markers
+  -- If numbered is enabled, force markers to '1.' for auto-numbered Markdown lists
+  if toc_config.numbered then
+    markers = { '1.' }
+  end
   local marker_index = 1
   if not toc_config.cycle_markers then
     markers = { markers[1] }
@@ -115,6 +119,12 @@ function M.gen_toc_list(start_from)
   local indent_size = toc_config.indent_size
   if type(indent_size) == 'function' then
     indent_size = indent_size()
+  end
+  -- For ordered (numbered) lists, many Markdown renderers require at least 3 spaces
+  -- of indentation per nesting level to render numbering correctly. Enforce a
+  -- minimum of 3 when numbered=true unless user already set a larger value.
+  if toc_config.numbered and (not indent_size or indent_size < 3) then
+    indent_size = 3
   end
 
   local item_formatter = toc_config.item_formatter

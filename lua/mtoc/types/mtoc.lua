@@ -21,6 +21,7 @@
 ---@class mtoc.ConfigTocList
 ---@field markers string[]
 ---@field cycle_markers boolean
+---@field numbered boolean
 ---@field indent_size integer|fun():integer
 ---@field item_format_string string
 ---@field item_formatter fun(item_info:mtoc.TocItemInfo, fmtstr:string):string
@@ -29,6 +30,7 @@
 ---@class mtoc.UserConfigTocList
 ---@field markers? string|string[]
 ---@field cycle_markers? boolean
+---@field numbered? boolean
 ---@field indent_size? integer|fun():integer
 ---@field item_format_string? string
 ---@field item_formatter? fun(item_info:mtoc.TocItemInfo, fmtstr:string):string

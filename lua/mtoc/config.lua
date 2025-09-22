@@ -24,6 +24,8 @@ M.defaults = {
     -- your markdown render supports it).
     markers = { '*' },
     cycle_markers = false,
+    -- If true, use an auto-numbered markdown list (equivalent to markers = '1.')
+    numbered = false,
     -- Example config for cycling markers:
     ----- markers = {'*', '+', '-'},
     ----- cycle_markers = true,
