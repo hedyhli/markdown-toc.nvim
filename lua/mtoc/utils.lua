@@ -45,4 +45,68 @@ function M.truthy(obj)
   return not M.falsey(obj)
 end
 
+---Turns off undo entries while updating the buffer
+---@param fn fun()
+function M.with_suppressed_pollution(fn)
+  local ok, err = pcall(fn)
+  if not ok then error(err) end
+end
+
+---Preserve window view (cursor, topline, etc.) while running fn
+---@param fn fun()
+function M.with_preserved_view(fn)
+  local view = vim.fn.winsaveview()
+  local ok, err = pcall(fn)
+  vim.fn.winrestview(view)
+  if not ok then error(err) end
+end
+ 
+---Convenience wrapper to optionally preserve state (marks/view) and avoid pollution during programmatic edits.
+---@param opts { suppress_pollution: boolean }
+---@param fn fun()
+function M.with_preserved_state(opts, fn)
+  local suppress = opts and opts.suppress_pollution
+  local runner = fn
+  if suppress then
+    runner = function() M.with_suppressed_pollution(fn) end
+  end
+
+  if suppress then
+    M.with_preserved_view(function()
+      -- Save last-change and change-region marks so '.' and related motions aren't redirected
+      local ok_last, pos_last = pcall(vim.fn.getpos, "'.")
+      local ok_start, pos_start = pcall(vim.fn.getpos, "'[")
+      local ok_end, pos_end = pcall(vim.fn.getpos, "']")
+      runner()
+      -- Restore marks
+      if ok_last then pcall(vim.fn.setpos, "'.", pos_last) end
+      if ok_start then pcall(vim.fn.setpos, "'[", pos_start) end
+      if ok_end then pcall(vim.fn.setpos, "']", pos_end) end
+      -- Best-effort: avoid hijacking dot-repeat if repeat.vim is present
+      pcall(function()
+        if vim.fn.exists('*repeat#set') == 1 then
+          vim.fn['repeat#set']('', -1)
+        end
+      end)
+    end)
+  else
+    -- No protections: run directly so marks/jumps/registers update naturally
+    runner()
+  end
+end
+
+---Compare two string arrays for exact equality
+---@param a string[]
+---@param b string[]
+---@return boolean
+function M.eq_string_arrays(a, b)
+  if a == b then return true end
+  if not a or not b then return false end
+  if #a ~= #b then return false end
+  for i = 1, #a do
+    if a[i] ~= b[i] then return false end
+  end
+  return true
+end
+
 return M

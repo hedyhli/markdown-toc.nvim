@@ -44,11 +44,13 @@
 ---@field enabled boolean
 ---@field events string[]
 ---@field pattern string
+---@field suppress_pollution boolean
 
 ---@class mtoc.UserConfigAutoUpdate
 ---@field enabled? boolean
 ---@field events? string[]
 ---@field pattern? string
+---@field suppress_pollution? boolean
 
 ---@class mtoc.Config
 ---@field headings mtoc.ConfigHeadings

@@ -74,6 +74,7 @@ M.defaults = {
     -- it does not exist.
     events = { "BufWritePre" },
     pattern = "*.{md,mdown,mkd,mkdn,markdown,mdwn}",
+    suppress_pollution = true,
   },
 
   -- links = {

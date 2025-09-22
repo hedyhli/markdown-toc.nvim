@@ -91,6 +91,7 @@ end
 local function update_toc(opts, fail_ok)
   if opts.range_start and opts.range_end then
     utils.delete_lines(opts.range_start, opts.range_end)
+    pcall(vim.cmd, 'silent undojoin')
     local use_fence = opts.bang
     return insert_toc({ line = opts.range_start-1, disable_fence = not use_fence })
   end
@@ -99,6 +100,7 @@ local function update_toc(opts, fail_ok)
   if empty_or_nil(locations) then
     return
   end
+  pcall(vim.cmd, 'silent undojoin')
   opts.line = locations.start-1
   return insert_toc(opts)
 end
@@ -122,6 +124,16 @@ local function _debug_show_headings()
   local line = utils.current_line()
   local lines = toc.gen_toc_list(line)
   utils.insert_lines(line, lines)
+end
+
+-- Perform an auto-update with state preservation. Exposed for autocmd to call with command modifiers.
+function M._auto_update()
+  local aup = config.opts.auto_update or {}
+  utils.with_preserved_state({
+    suppress_pollution = aup.suppress_pollution,
+  }, function()
+    update_toc({}, true)
+  end)
 end
 
 local function handle_command(opts)
@@ -172,7 +184,6 @@ end
 
 
 local function setup_commands()
-  M.autocmds = {}
   vim.api.nvim_create_user_command("Mtoc", handle_command, {
     nargs = '?',
     range = true,
@@ -197,8 +208,20 @@ local function setup_autocmds()
   end
   local id = vim.api.nvim_create_autocmd(aup.events, {
     pattern = aup.pattern,
-    callback = function() update_toc({}, true) end
-  })
+    callback = function()
+      -- Use command modifiers to avoid changing jumplist and last-change mark
+      local mods = { silent = true }
+      if aup.suppress_pollution then
+        mods.keepjumps = true
+        mods.lockmarks = true
+      end
+      vim.api.nvim_cmd({
+        cmd = 'lua',
+        args = { 'require("mtoc")._auto_update()' },
+        mods = mods,
+      }, {})
+     end,
+   })
   table.insert(M.autocmds, id)
 end
 
