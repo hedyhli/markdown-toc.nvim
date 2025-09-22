@@ -170,7 +170,9 @@ local function handle_command(opts)
   end
 end
 
+
 local function setup_commands()
+  M.autocmds = {}
   vim.api.nvim_create_user_command("Mtoc", handle_command, {
     nargs = '?',
     range = true,
@@ -183,17 +185,21 @@ end
 
 local function setup_autocmds()
   M.autocmds = {}
-  if config.opts.auto_update then
-    local aup = config.opts.auto_update
-    if type(aup) == 'boolean' then
-      aup = config.defaults.auto_update
-    end
-    local id = vim.api.nvim_create_autocmd(aup.events, {
-      pattern = aup.pattern,
-      callback = function() update_toc({}, true) end
-    })
-    table.insert(M, id)
+  local aup = config.opts.auto_update
+  if not aup then
+    return
   end
+  if type(aup) == 'boolean' then
+    aup = config.defaults.auto_update
+  end
+  if not aup.enabled then
+    return
+  end
+  local id = vim.api.nvim_create_autocmd(aup.events, {
+    pattern = aup.pattern,
+    callback = function() update_toc({}, true) end
+  })
+  table.insert(M.autocmds, id)
 end
 
 ---Remove autocmds that were set up by this plugin
