@@ -7,16 +7,16 @@ jobs:
     runs-on: ubuntu-latest
     name: panvimdoc
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
       - name: panvimdoc
         uses: kdheepak/panvimdoc@main
         with:
           vimdoc: mtoc
-          version: "NVIM v0.5.0"
+          version: "NVIM v0.11.4"
       - name: Strip last change date
         run: sed -E '1s_\s+Last.*__' -i doc/mtoc.txt
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          commit_message: "Auto generate vim doc"
+          commit_message: "docs: auto generate vim doc"
           branch: ${{ github.head_ref }}
           skip_dirty_check: false

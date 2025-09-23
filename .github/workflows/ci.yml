@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NVIM_VERSION: v0.11.4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git curl ca-certificates build-essential make unzip
+
+      - name: Download Neovim AppImage (${{ env.NVIM_VERSION }})
+        run: |
+          curl -fsSL -o nvim.appimage \
+            https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.appimage
+          chmod +x nvim.appimage
+          ./nvim.appimage --appimage-extract
+          chmod +x ./squashfs-root/AppRun
+          echo "NVIM_BIN=$PWD/squashfs-root/AppRun" >> $GITHUB_ENV
+          $PWD/squashfs-root/AppRun --version
+
+      - name: Prepare test plugin deps (plenary, nvim-treesitter)
+        run: |
+          mkdir -p deps
+          if [ ! -d deps/plenary.nvim ]; then \
+            git clone --depth=1 https://github.com/nvim-lua/plenary.nvim deps/plenary.nvim; \
+          fi
+          if [ ! -d deps/nvim-treesitter ]; then \
+            git clone --depth=1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter; \
+          fi
+
+      - name: Install Tree-sitter parsers (markdown)
+        run: |
+          $NVIM_BIN --headless -u tests/minimal_init.lua \
+            +"lua require('nvim-treesitter.install').compilers = { 'gcc', 'clang' }" \
+            +"TSInstall markdown markdown_inline" +qa
+
+      - name: Run unit tests
+        run: |
+          $NVIM_BIN --version
+          $NVIM_BIN --headless -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/" -c "qa"

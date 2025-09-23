@@ -8,15 +8,22 @@
 ---@field before_toc boolean
 ---@field exclude string[]|fun(heading:string):boolean
 ---@field pattern string
+---@field parser 'auto'|'treesitter'|'regex'
+---@field min_depth integer|nil
+---@field max_depth integer|nil
 
 ---@class mtoc.UserConfigHeadings
 ---@field before_toc? boolean
 ---@field exclude? string|string[]|fun(heading:string):boolean
 ---@field pattern? string
+---@field parser? 'auto'|'treesitter'|'regex'
+---@field min_depth? integer|nil
+---@field max_depth? integer|nil
 
 ---@class mtoc.ConfigTocList
 ---@field markers string[]
 ---@field cycle_markers boolean
+---@field numbered boolean
 ---@field indent_size integer|fun():integer
 ---@field item_format_string string
 ---@field item_formatter fun(item_info:mtoc.TocItemInfo, fmtstr:string):string
@@ -25,6 +32,7 @@
 ---@class mtoc.UserConfigTocList
 ---@field markers? string|string[]
 ---@field cycle_markers? boolean
+---@field numbered? boolean
 ---@field indent_size? integer|fun():integer
 ---@field item_format_string? string
 ---@field item_formatter? fun(item_info:mtoc.TocItemInfo, fmtstr:string):string
@@ -44,11 +52,13 @@
 ---@field enabled boolean
 ---@field events string[]
 ---@field pattern string
+---@field suppress_pollution boolean
 
 ---@class mtoc.UserConfigAutoUpdate
 ---@field enabled? boolean
 ---@field events? string[]
 ---@field pattern? string
+---@field suppress_pollution? boolean
 
 ---@class mtoc.Config
 ---@field headings mtoc.ConfigHeadings
