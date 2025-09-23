@@ -2,6 +2,8 @@ local M = {}
 
 ---@type mtoc.Config
 M.defaults = {
+  -- Global debug flag: when true, plugin will log verbose diagnostics
+  debug = false,
   -- Config relating to fetching of headings to be included in ToC
   headings = {
     -- Include headings before the ToC (or current line for `:Mtoc insert`)
@@ -10,10 +12,16 @@ M.defaults = {
     -- or a function that returns boolean (true means to EXCLUDE heading)
     exclude = {},
     pattern = "^(#+)%s+(.+)$",
+    -- Which parser to use for heading detection: 'auto' | 'treesitter' | 'regex'
+    -- 'auto' prefers Tree-sitter when available, otherwise falls back to regex.
+    parser = 'auto',
     -- Optional: limit which heading levels are included (1 = H1, 2 = H2, ...)
     -- Set to nil to disable the bound. Example: min_depth = 2, max_depth = 4
     min_depth = nil,
     max_depth = nil,
+    -- When true, generate a partial ToC scoped to the current section (the heading
+    -- enclosing the cursor) instead of the whole document.
+    partial_under_cursor = false,
   },
 
   -- Config relating to the style and format of the ToC
@@ -24,7 +32,8 @@ M.defaults = {
     -- your markdown render supports it).
     markers = { '*' },
     cycle_markers = false,
-    -- If true, use an auto-numbered markdown list (equivalent to markers = '1.')
+    -- If true, use an auto-numbered markdown list (equivalent to markers = '1.',
+    -- but checks for a suitable indent_size)
     numbered = false,
     -- Example config for cycling markers:
     ----- markers = {'*', '+', '-'},
@@ -79,7 +88,8 @@ M.defaults = {
     -- The refresh operation uses `Mtoc update` and does NOT create the ToC if
     -- it does not exist.
     events = { "BufWritePre" },
-    pattern = "*.{md,mdown,mkd,mkdn,markdown,mdwn}",
+    -- Neovim autocmd patterns do NOT support brace expansion; use a list.
+    pattern = { "*.md", "*.mdown", "*.mkd", "*.mkdn", "*.markdown", "*.mdwn" },
     suppress_pollution = true,
   },
 
@@ -116,6 +126,21 @@ function M.resolve_shortcut_opts()
   if type(M.opts.auto_update.events) == 'string' then
     ---@diagnostic disable-next-line
     M.opts.auto_update.events = { M.opts.auto_update.events }
+  end
+  -- Normalize pattern: convert brace expansion to list if present
+  local pat = M.opts.auto_update.pattern
+  if type(pat) == 'string' then
+    local m = pat:match('%*%.%{(.+)%}')
+    if m then
+      local list = {}
+      for ext in m:gmatch('[^,]+') do
+        table.insert(list, '*.'..ext)
+      end
+      M.opts.auto_update.pattern = list
+    else
+      ---@diagnostic disable-next-line
+      M.opts.auto_update.pattern = { pat }
+    end
   end
   if type(M.opts.toc_list.markers) == 'string' then
     ---@diagnostic disable-next-line

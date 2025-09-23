@@ -8,6 +8,7 @@
 ---@field before_toc boolean
 ---@field exclude string[]|fun(heading:string):boolean
 ---@field pattern string
+---@field parser 'auto'|'treesitter'|'regex'
 ---@field min_depth integer|nil
 ---@field max_depth integer|nil
 
@@ -15,6 +16,7 @@
 ---@field before_toc? boolean
 ---@field exclude? string|string[]|fun(heading:string):boolean
 ---@field pattern? string
+---@field parser? 'auto'|'treesitter'|'regex'
 ---@field min_depth? integer|nil
 ---@field max_depth? integer|nil
 
