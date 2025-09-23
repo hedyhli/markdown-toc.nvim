@@ -46,10 +46,27 @@ local function insert_toc(opts)
   -- Generate either a full or a partial (scoped) ToC based on config
   local hcfg = config.opts.headings
   local label = opts.label
-  if not label and (hcfg.min_depth ~= nil or hcfg.partial_under_cursor) then
-    lines = toc.gen_toc_list_scoped()
-    -- Create unique label for partial ToC fences based on current section slug
-    label = toc.current_section_slug()
+  if (hcfg.min_depth ~= nil or hcfg.partial_under_cursor) then
+    -- Determine current section range and build partial TOC strictly from it
+    local cur = vim.api.nvim_win_get_cursor(0)[1]
+    local s_range, e_range = toc.find_current_section_range(cur)
+    lines = toc.gen_toc_list_for_range(s_range, e_range)
+    -- Create and freeze a stable short-hash label from the parent heading text
+    if not label or label == '' then
+      local heading_line = vim.api.nvim_buf_get_lines(0, s_range, s_range+1, false)[1] or ''
+      local _, heading_name = string.match(heading_line, config.opts.headings.pattern)
+      heading_name = heading_name or heading_line
+      local new_hash
+      local ok, dig = pcall(vim.fn.sha256, heading_name)
+      if ok and type(dig) == 'string' then
+        new_hash = string.sub(dig, 1, 7)
+      else
+        local sum = 0
+        for i = 1, #heading_name do sum = (sum * 33 + string.byte(heading_name, i)) % 0xFFFFFFFF end
+        new_hash = string.format('%07x', sum)
+      end
+      label = new_hash
+    end
   else
     lines = toc.gen_toc_list(start)
   end
@@ -263,20 +280,47 @@ local function update_all_tocs()
       end
     end
     local toc_lines
+    local label_to_use = item.label
+    local relabel = false
     if item.label and item.label ~= '' then
       dbg('auto_update: regenerating partial ToC for label='..item.label)
       toc_lines = toc.gen_toc_list_for_label(item.label)
+      if utils.empty_or_nil(toc_lines) then
+        -- Likely the parent heading was renamed. Recompute by section range
+        local s0 = item.start0 or (item.start and (item.start-1)) or 0
+        local cur_line = s0 + 1 -- 1-based for range finder
+        local s_range, e_range = toc.find_current_section_range(cur_line)
+        dbg(string.format('auto_update: label produced empty TOC; recomputing by range [%d,%d)', s_range, e_range))
+        toc_lines = toc.gen_toc_list_for_range(s_range, e_range)
+        -- Relabel fence with a stable short hash derived from current section heading
+        local heading_line = vim.api.nvim_buf_get_lines(0, s_range, s_range+1, false)[1] or ''
+        local _, heading_name = string.match(heading_line, config.opts.headings.pattern)
+        heading_name = heading_name or heading_line
+        local new_hash
+        local ok, dig = pcall(vim.fn.sha256, heading_name)
+        if ok and type(dig) == 'string' then
+          new_hash = string.sub(dig, 1, 7)
+        else
+          -- fallback simple hash
+          local sum = 0
+          for i = 1, #heading_name do sum = (sum * 33 + string.byte(heading_name, i)) % 0xFFFFFFFF end
+          new_hash = string.format('%07x', sum)
+        end
+        label_to_use = new_hash
+        relabel = true
+        dbg('auto_update: relabeling partial fence to frozen label '..label_to_use)
+      end
     else
       dbg('auto_update: regenerating full ToC')
       toc_lines = toc.gen_toc_list(0)
     end
     toc_lines = config.opts.toc_list.post_processor(toc_lines)
     local new_block = {}
-    table.insert(new_block, fmt_fence_start(fences.start_text, item.label))
+    table.insert(new_block, fmt_fence_start(fences.start_text, label_to_use))
     if not (toc_lines[1] == '' or #toc_lines == 0) then table.insert(new_block, '') end
     for _, l in ipairs(toc_lines) do table.insert(new_block, l) end
     if new_block[#new_block] ~= '' then table.insert(new_block, '') end
-    table.insert(new_block, fmt_fence_end(fences.end_text, item.label))
+    table.insert(new_block, fmt_fence_end(fences.end_text, label_to_use))
     -- Replace the existing fenced block
     local s0 = item.start0 or (item.start and (item.start-1)) or 0
     local e0 = item.end0 or item.end_ or s0

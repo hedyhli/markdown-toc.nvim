@@ -769,4 +769,91 @@ function M.gen_toc_list_scoped()
   return M.gen_toc_list(0)
 end
 
+---Generate a ToC list for an explicit section range [s,e) (0-based rows, end-exclusive).
+---Skips the base heading itself when the range starts exactly at a heading line.
+---@param s integer
+---@param e integer
+---@return string[]
+function M.gen_toc_list_for_range(s, e)
+  local toc_config = config.opts.toc_list
+  local markers = toc_config.markers
+  if toc_config.numbered then markers = { '1.' } end
+  local marker_index = 1
+  if not toc_config.cycle_markers then markers = { markers[1] } end
+  local indent_size = toc_config.indent_size
+  if type(indent_size) == 'function' then indent_size = indent_size() end
+  if toc_config.numbered and (not indent_size or indent_size < 3) then indent_size = 3 end
+  local item_formatter = toc_config.item_formatter
+
+  local lines = {}
+  local base_depth
+  local prev_clamped_depth
+  local all_heading_links = {}
+  local hcfg = config.opts.headings
+  local min_depth_cfg = hcfg.min_depth
+  local max_depth_cfg = hcfg.max_depth
+  local headings = {}
+
+  local parser_choice = (config.opts.headings and config.opts.headings.parser) or 'auto'
+  local use_ts = (parser_choice == 'treesitter') or (parser_choice == 'auto' and ts_available())
+  local collected = use_ts and ts_collect_headings(s, e) or {}
+  if not use_ts then
+    local is_inside_code_block = false
+    for _, line in ipairs(vim.api.nvim_buf_get_lines(0, s, e, false)) do
+      if line:find('^```') then is_inside_code_block = not is_inside_code_block end
+      if not is_inside_code_block then
+        local pfx, nm = line:match(config.opts.headings.pattern)
+        if pfx and nm and #pfx <= 6 then table.insert(collected, { depth = #pfx, name = nm }) end
+      end
+    end
+  end
+
+  -- Determine whether to skip base heading itself
+  local skip_base
+  do
+    local parser_choice2 = (config.opts.headings and config.opts.headings.parser) or 'auto'
+    local use_ts2 = (parser_choice2 == 'treesitter') or (parser_choice2 == 'auto' and ts_ok and tsq ~= nil)
+    if use_ts2 then
+      local base_check = ts_collect_headings(s, s+1)
+      skip_base = #base_check > 0
+    else
+      local line_s = vim.api.nvim_buf_get_lines(0, s, s+1, false)[1] or ''
+      local pfx = line_s:match(config.opts.headings.pattern)
+      skip_base = pfx ~= nil
+    end
+  end
+
+  for _, item in ipairs(collected) do
+    local raw_depth = item.depth
+    local name = item.name
+    if not ((min_depth_cfg and raw_depth < min_depth_cfg) or (max_depth_cfg and raw_depth > max_depth_cfg)) then
+      if not base_depth then
+        base_depth = raw_depth
+        prev_clamped_depth = raw_depth
+        if skip_base then goto continue end
+      end
+      local clamped = raw_depth
+      if prev_clamped_depth and prev_clamped_depth + 1 < raw_depth then clamped = prev_clamped_depth + 1 end
+      prev_clamped_depth = clamped
+      marker_index = (marker_index - 1) % #markers + 1
+      local marker = markers[marker_index]
+      name = name:gsub('%[(.-)%]%(.-%)', '%1')
+      local depth = clamped - base_depth
+      local link = M.link_formatters.gfm(all_heading_links, name)
+      local fmt_info = { name = name, link = link, depth = depth, marker = marker, raw_line = '' }
+      fmt_info.indent = (" "):rep(depth * indent_size)
+      table.insert(headings, fmt_info)
+    end
+    ::continue::
+  end
+
+  for _, fmt_info in ipairs(headings) do
+    local depth = fmt_info.depth
+    fmt_info.indent = (' '):rep(depth * indent_size)
+    local item = item_formatter(fmt_info, toc_config.item_format_string)
+    table.insert(lines, item)
+  end
+  return lines
+end
+
 return M
