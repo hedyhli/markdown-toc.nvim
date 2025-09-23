@@ -83,7 +83,9 @@ function M.gen_toc_list_for_label(label)
   local prev_clamped_depth = base_depth
   local lines = {}
   local all_heading_links = {}
-  for k = target_idx+1, #headings do
+  -- If before_toc is true, include the parent heading itself as the first item
+  local start_k = (config.opts.headings and config.opts.headings.before_toc) and target_idx or (target_idx+1)
+  for k = start_k, #headings do
     local h = headings[k]
     if h.row >= end_row then break end
     local raw_depth = h.depth
@@ -733,6 +735,10 @@ function M.gen_toc_list_scoped()
       local pfx = line_s:match(config.opts.headings.pattern)
       skip_base = pfx ~= nil
     end
+    if config.opts.headings and config.opts.headings.before_toc then
+      -- When before_toc=true, include the parent heading itself as first item
+      skip_base = false
+    end
     for _, item in ipairs(collected) do
       local raw_depth = item.depth
       local name = item.name
@@ -821,6 +827,9 @@ function M.gen_toc_list_for_range(s, e)
       local pfx = line_s:match(config.opts.headings.pattern)
       skip_base = pfx ~= nil
     end
+  end
+  if config.opts.headings and config.opts.headings.before_toc then
+    skip_base = false
   end
 
   for _, item in ipairs(collected) do
