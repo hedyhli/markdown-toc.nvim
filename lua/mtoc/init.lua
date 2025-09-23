@@ -34,10 +34,8 @@ local function insert_toc(opts)
     opts = {}
   end
 
-  local start = opts.line or utils.current_line()
-  if config.opts.headings.before_toc then
-    start = 0
-  end
+  -- Determine insertion point (cursor by default) independent of generation scope.
+  local insert_at = opts.line or utils.current_line()
 
   local lines = {}
   local fences = get_fences()
@@ -68,7 +66,12 @@ local function insert_toc(opts)
       label = new_hash
     end
   else
-    lines = toc.gen_toc_list(start)
+    -- Full ToC: optionally include headings before the insertion point in generation
+    local gen_start = insert_at
+    if hcfg.before_toc then
+      gen_start = 0
+    end
+    lines = toc.gen_toc_list(gen_start)
   end
   if empty_or_nil(lines) then
     if use_fence then
@@ -92,7 +95,7 @@ local function insert_toc(opts)
     end
   end
 
-  utils.insert_lines(start, lines)
+  utils.insert_lines(insert_at, lines)
 end
 
 local function remove_toc(not_found_ok)

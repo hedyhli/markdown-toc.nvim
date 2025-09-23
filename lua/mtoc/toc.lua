@@ -162,9 +162,26 @@ function M.find_all_fences()
         if txt:find('<!-- '..tag, 1, true) then
           -- Try to extract label; if none, it's unlabeled
           local lbl = txt:match('<!%-%-%s*'..tag..'%s*:%s*(.-)%s*%-%->')
+          if not lbl then
+            -- Fallback: permissive capture up to closing --> allowing extra chars
+            lbl = txt:match('<!%-%-.-'..tag..'%s*:%s*([^%s:><%-]+)')
+          end
+          if not lbl then
+            -- Last-resort: substring between first ':' after the tag and the next '-->'
+            local tag_pos = txt:find(tag, 1, true)
+            if tag_pos then
+              local colon_pos = txt:find(':', tag_pos, true)
+              local end_pos = txt:find('-->', (colon_pos or 0), true)
+              if colon_pos and end_pos and end_pos > colon_pos then
+                lbl = txt:sub(colon_pos+1, end_pos-1)
+                lbl = (lbl:gsub('^%s+', ''):gsub('%s+$', ''))
+              end
+            end
+          end
           if lbl then
             lbl = lbl:gsub('%s+$', ''):gsub('^%s+', '')
           end
+          if lbl == nil then dbg('TS: unable to extract label from html_block text: '..txt) end
           return lbl, tag
         end
       end
@@ -173,7 +190,12 @@ function M.find_all_fences()
     local function ts_match_end(txt, label, tag)
       local endtag = (tag == 'mtoc-start') and 'mtoc-end' or tag
       if label then
-        return txt:match('<!%-%-%s*'..endtag..'%s*:%s*'..label..'%s*%-%->') ~= nil
+        if txt:match('<!%-%-%s*'..endtag..'%s*:%s*'..label..'%s*%-%->') then return true end
+        -- Fallback: accept unlabeled end if labeled end isn't present in this html_block
+        if txt:match('<!%-%-%s*'..endtag..'%s*%-%->') then return true end
+        -- Most permissive: any occurrence of the end tag substring
+        if txt:find('<!-- '..endtag, 1, true) then return true end
+        return false
       end
       return txt:find('<!-- '..endtag, 1, true) ~= nil
     end
@@ -192,6 +214,7 @@ function M.find_all_fences()
           if matched then
             -- Return 0-based start and 0-based exclusive end rows
             table.insert(res, { start0 = b.srow, end0 = be.erow, label = label })
+            dbg(string.format('TS: paired start@%d end@%d with label=%s', b.srow, be.erow, tostring(label)))
             i = j
             break
           end
@@ -208,7 +231,7 @@ function M.find_all_fences()
 
   -- Fallback: regex scanner over lines
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local res = {}
+  local regex_res = {}
   local in_code = false
   local i = 1
   local function rx_match_start(str)
@@ -245,7 +268,7 @@ function M.find_all_fences()
             if em then
               dbg(string.format('Regex: end matched at line %d (label=%s tag=%s)', j, tostring(label), tostring(s_tag)))
               -- Convert 1-based inclusive to 0-based [start0, end0_excl]
-              table.insert(res, { start0 = i-1, end0 = j, label = label })
+              table.insert(regex_res, { start0 = i-1, end0 = j, label = label })
               i = j -- advance to end
               break
             end
@@ -256,8 +279,7 @@ function M.find_all_fences()
     end
     i = i + 1
   end
-  dbg('Regex fences found: '..tostring(#res))
-  if #res > 0 then return res end
+  dbg('Regex fences found: '..tostring(#regex_res))
 
   -- Ultimate fallback: scan entire buffer text with very permissive patterns
   -- to ensure we detect fences regardless of whitespace peculiarities.
@@ -292,6 +314,7 @@ function M.find_all_fences()
     return cnt
   end
   local j = 1
+  local fb_res = {}
   for i = 1, #starts do
     local st = starts[i]
     while j <= #ends and ends[j].pos < st.pos do j = j + 1 end
@@ -302,15 +325,61 @@ function M.find_all_fences()
       if st.label == en.label and en.tag == expected_end_tag then
         local s0 = pos_to_row(st.pos)
         local e0 = pos_to_row(en.pos)
-        table.insert(res, { start0 = s0, end0 = e0, label = st.label })
+        table.insert(fb_res, { start0 = s0, end0 = e0, label = st.label })
         j = k + 1
         break
       end
       k = k + 1
     end
   end
-  dbg('Ultimate fallback fences found: '..tostring(#res))
-  return res
+  dbg('Ultimate fallback fences found: '..tostring(#fb_res))
+  -- Merge regex and fallback results, dedupe by start0/end0
+  local merged = {}
+  local seen = {}
+  local function add_all(list)
+    for _, it in ipairs(list) do
+      local key = tostring(it.start0)..':'..tostring(it.end0)
+      if not seen[key] then
+        table.insert(merged, it)
+        seen[key] = true
+      end
+    end
+  end
+  add_all(regex_res)
+  add_all(fb_res)
+  if #merged > 0 then return merged end
+  -- Final naive scanner: pair mtoc-start/mtoc-end by label or order
+  local naive = {}
+  local starts_l = {}
+  local starts_u = {}
+  local ends_l = {}
+  local ends_u = {}
+  for idx, line in ipairs(lines) do
+    local lbl = line:match('^%s*<!%-%-%s*mtoc%-start:%s*(.-)%s*%-%->%s*$')
+    if lbl then table.insert(starts_l, { i = idx-1, label = lbl }) end
+    if line:match('^%s*<!%-%-%s*mtoc%-start%s*%-%->%s*$') then table.insert(starts_u, idx-1) end
+    local el = line:match('^%s*<!%-%-%s*mtoc%-end:%s*(.-)%s*%-%->%s*$')
+    if el then table.insert(ends_l, { i = idx-1, label = el }) end
+    if line:match('^%s*<!%-%-%s*mtoc%-end%s*%-%->%s*$') then table.insert(ends_u, idx-1) end
+  end
+  -- Pair labeled first
+  local used_e = {}
+  for _, st in ipairs(starts_l) do
+    local eidx = nil
+    for j, en in ipairs(ends_l) do
+      if not used_e[j] and en.label == st.label and en.i >= st.i then eidx = j; break end
+    end
+    if eidx then
+      table.insert(naive, { start0 = st.i, end0 = ends_l[eidx].i, label = st.label })
+      used_e[eidx] = true
+    end
+  end
+  -- Pair unlabeled by order
+  local n = math.min(#starts_u, #ends_u)
+  for k = 1, n do
+    table.insert(naive, { start0 = starts_u[k], end0 = ends_u[k], label = nil })
+  end
+  return naive
 end
  
 
@@ -609,6 +678,31 @@ function M.find_current_section_range(cursor_lnum)
         break
       end
     end
+    -- If min_depth is set and the base heading is too deep, re-anchor to
+    -- the nearest ancestor with depth < min_depth and recompute end.
+    local md = config.opts.headings and config.opts.headings.min_depth
+    if md ~= nil then
+      local hs_all = ts_collect_headings(0, -1)
+      if #hs_all > 0 then
+        local base_idx
+        for i = #hs_all, 1, -1 do if hs_all[i].row <= start_idx then base_idx = i; break end end
+        if base_idx then
+          local base_depth = hs_all[base_idx].depth
+          if base_depth >= md then
+            local anchor_idx = base_idx
+            for i = base_idx, 1, -1 do
+              if hs_all[i].depth < md then anchor_idx = i; break end
+            end
+            local anchor_depth = hs_all[anchor_idx].depth
+            start_idx = hs_all[anchor_idx].row
+            end_row = vim.api.nvim_buf_line_count(0)
+            for j = anchor_idx+1, #hs_all do
+              if hs_all[j].depth <= anchor_depth then end_row = hs_all[j].row; break end
+            end
+          end
+        end
+      end
+    end
     return start_idx, end_row
   end
 
@@ -646,6 +740,37 @@ function M.find_current_section_range(cursor_lnum)
       end
     end
     ::continue2::
+  end
+  -- If min_depth is set, re-anchor to nearest ancestor with depth < min_depth
+  local md = config.opts.headings and config.opts.headings.min_depth
+  if md ~= nil and cur_depth and cur_depth >= md then
+    local anchor_line = start_idx
+    local anchor_depth = cur_depth
+    -- Walk upwards over 1-based buffer indices
+    for j = start_idx + 1, 1, -1 do
+      local line2 = buflines[j]
+      if line2 then
+        local p2 = line2:match(pattern)
+        if p2 and #p2 < md then
+          anchor_line = j - 1 -- convert back to 0-based row
+          anchor_depth = #p2
+          break
+        end
+      end
+    end
+    start_idx = anchor_line
+    end_idx = #buflines
+    -- Walk forwards from the line after start_idx
+    for j = start_idx + 2, #buflines do
+      local line3 = buflines[j]
+      if line3 then
+        local p3 = line3:match(pattern)
+        if p3 and #p3 <= anchor_depth then
+          end_idx = j - 1 -- exclusive end is previous line
+          break
+        end
+      end
+    end
   end
   return start_idx, end_idx
 end
@@ -739,15 +864,16 @@ function M.gen_toc_list_scoped()
       -- When before_toc=true, include the parent heading itself as first item
       skip_base = false
     end
+
     for _, item in ipairs(collected) do
       local raw_depth = item.depth
       local name = item.name
+      if not base_depth then
+        base_depth = raw_depth
+        prev_clamped_depth = raw_depth
+        if skip_base then goto continue end
+      end
       if not ((min_depth_cfg and raw_depth < min_depth_cfg) or (max_depth_cfg and raw_depth > max_depth_cfg)) then
-        if not base_depth then
-          base_depth = raw_depth
-          prev_clamped_depth = raw_depth
-          if skip_base then goto continue end
-        end
         local clamped = raw_depth
         if prev_clamped_depth and prev_clamped_depth + 1 < raw_depth then
           clamped = prev_clamped_depth + 1
@@ -755,10 +881,12 @@ function M.gen_toc_list_scoped()
         prev_clamped_depth = clamped
         marker_index = (marker_index - 1) % #markers + 1
         local marker = markers[marker_index]
+        -- Strip embedded links in name
         name = name:gsub('%[(.-)%]%(.-%)', '%1')
         local depth = clamped - base_depth
         local link = M.link_formatters.gfm(all_heading_links, name)
         local fmt_info = { name = name, link = link, depth = depth, marker = marker, raw_line = '' }
+        fmt_info.indent = (" "):rep(depth * indent_size)
         table.insert(headings, fmt_info)
       end
       ::continue::
@@ -835,12 +963,12 @@ function M.gen_toc_list_for_range(s, e)
   for _, item in ipairs(collected) do
     local raw_depth = item.depth
     local name = item.name
+    if not base_depth then
+      base_depth = raw_depth
+      prev_clamped_depth = raw_depth
+      if skip_base then goto continue end
+    end
     if not ((min_depth_cfg and raw_depth < min_depth_cfg) or (max_depth_cfg and raw_depth > max_depth_cfg)) then
-      if not base_depth then
-        base_depth = raw_depth
-        prev_clamped_depth = raw_depth
-        if skip_base then goto continue end
-      end
       local clamped = raw_depth
       if prev_clamped_depth and prev_clamped_depth + 1 < raw_depth then clamped = prev_clamped_depth + 1 end
       prev_clamped_depth = clamped
