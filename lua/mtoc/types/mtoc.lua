@@ -7,12 +7,10 @@
 ---@class mtoc.ConfigHeadings
 ---@field before_toc boolean
 ---@field exclude string[]|fun(heading:string):boolean
----@field pattern string
 
 ---@class mtoc.UserConfigHeadings
 ---@field before_toc? boolean
 ---@field exclude? string|string[]|fun(heading:string):boolean
----@field pattern? string
 
 ---@class mtoc.ConfigTocList
 ---@field markers string[]
@@ -45,12 +43,10 @@
 ---@class mtoc.ConfigAutoUpdate
 ---@field enabled boolean
 ---@field events string[]
----@field pattern string
 
 ---@class mtoc.UserConfigAutoUpdate
 ---@field enabled? boolean
 ---@field events? string[]
----@field pattern? string
 
 ---@class mtoc.Config
 ---@field headings mtoc.ConfigHeadings

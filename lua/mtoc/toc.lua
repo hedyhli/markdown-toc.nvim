@@ -98,6 +98,17 @@ function M.find_fences(fstart, fend)
   return _find_fences_same(fstart, lines)
 end
 
+local function extract_heading(line)
+	local prefix, name = string.match(line, "^(#+)%s+%[%[(.-)%]%]$") -- Try to match the brackets first
+
+	-- If brackets do not exist, fallback to matching without them
+	if not name then
+		prefix, name = string.match(line, "^(#+)%s+(.+)$")
+	end
+
+	return prefix, name -- Return the prefix and name
+end
+
 ---Returns a list of strings representing the lines of the ToC list.
 ---Calls both link formatter and item formatter based on config.
 ---@param start_from integer|nil The line number before which, headings will be ignored
@@ -136,7 +147,7 @@ function M.gen_toc_list(start_from)
       goto nextline
     end
 
-    local prefix, name = string.match(line, config.opts.headings.pattern)
+    local prefix, name = extract_heading(line)
     if not prefix or not name or #prefix > 6 then
       goto nextline
     end

@@ -9,7 +9,6 @@ M.defaults = {
     -- Either list of lua patterns,
     -- or a function that returns boolean (true means to EXCLUDE heading)
     exclude = {},
-    pattern = "^(#+)%s+(.+)$",
   },
 
   -- Config relating to the style and format of the ToC
