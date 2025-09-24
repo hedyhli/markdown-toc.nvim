@@ -21,6 +21,7 @@
 ---@field item_format_string string
 ---@field item_formatter fun(item_info:mtoc.TocItemInfo, fmtstr:string):string
 ---@field post_processor fun(lines:string[]):string[]
+---@field padding_lines integer
 
 ---@class mtoc.UserConfigTocList
 ---@field markers? string|string[]
@@ -29,6 +30,7 @@
 ---@field item_format_string? string
 ---@field item_formatter? fun(item_info:mtoc.TocItemInfo, fmtstr:string):string
 ---@field post_processor? fun(lines:string[]):string[]
+---@field padding_lines? integer
 
 ---@class mtoc.ConfigFences
 ---@field enabled boolean

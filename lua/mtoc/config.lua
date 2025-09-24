@@ -49,7 +49,10 @@ M.defaults = {
 
     -- Called after an array of lines for the ToC is computed. This does not
     -- include the fences even if it's enabled.
-    post_processor = function(lines) return lines end
+    post_processor = function(lines) return lines end,
+
+    -- Add padding (blank lines) before and after the TOC
+    padding_lines = 1,
   },
 
   -- Table or boolean. Set to true to use these defaults, set to false to disable completely.
